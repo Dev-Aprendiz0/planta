@@ -67,7 +67,7 @@
     </div>
     <div id="legend">
         <h3>LEGENDA (m)</h3>
-        <div class="ci"><div class="cb" style="background:#b0a590"></div> Paredes (0,12)</div>
+        <div class="ci"><div class="cb" style="background:#d4c8b0"></div> Paredes (0,12)</div>
         <div class="ci"><div class="cb" style="background:#8B6914"></div> Portas</div>
         <div class="ci"><div class="cb" style="background:#88ccee"></div> Janelas</div>
         <div class="ci"><div class="cb" style="background:#999"></div> Laje (0,10)</div>
@@ -116,7 +116,7 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
+        renderer.toneMappingExposure = 1.15;
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
         const labelRenderer = new CSS2DRenderer();
@@ -133,72 +133,155 @@
         controls.update();
 
         // ===== CONSTANTS =====
-        const W = 0.14;
-        const H = 2.70; // Pé-direito adotado: 2,70m
-        const SLAB = 0.10;
+        const W = 0.12;          // parede = 0,12m
+        const H = 2.70;          // pe-direito = 2,70m
+        const SLAB = 0.10;       // laje = 0,10m
 
-        // ===== CORRECTED ROOM COORDINATES =====
-        // Building: 7.50 x 9.96 (external), walls 0.12m thick
+        // ===== ROOM COORDINATES (internal face-to-face) =====
+        // Building: 7.50 x 9.96 (external)
         //
-        // LEFT COLUMN widths:
-        //   QT1:  3.30m (x=0.12 to 3.42)
-        //   QT2:  3.88m (x=0.12 to 4.00) — WIDER than QT1
-        //   ESTAC: 3.50m (x=0.12 to 3.62)
-        //   BWH_Sup: 3.26m (x=0.12 to 3.38)
+        // LEFT COLUMN (x):
+        //   BWH_Sup: 3.26m  (x=0.12..3.38)
+        //   QT1:     3.30m  (x=0.12..3.42)
+        //   QT2:     3.88m  (x=0.12..4.00)  -- wider than QT1!
+        //   ESTAC:   3.50m  (x=0.12..3.62)
         //
-        // CENTER COLUMN (corridor):
-        //   At QT2 level: 0.90m wide (x=4.12 to 5.02) — NARROW
-        //   At QT1/BWH level: 1.60m wide (x=3.54 to 5.14) — includes BWH
-        //   Step wall at z=5.28 connects x=3.42 to x=4.12
+        // CENTER (corridor / BWH):
+        //   CIRC at QT2 level: 0.90m  (x=4.12..5.02)
+        //   BWH at QT1 level:  1.48m  (x=3.54..5.02)
+        //   Step wall at z=5.34 connects x=3.48 -> 4.06
         //
-        // RIGHT COLUMN:
-        //   CZ:  2.24m (x=5.14 to 7.38)
-        //   AS:  2.24m (x=5.14 to 7.38)
-        //   SL:  3.64m (x=3.74 to 7.38) at z<2.66; narrower above
+        // RIGHT COLUMN (x):
+        //   CZ:  2.24m  (x=5.14..7.38)
+        //   AS:  2.24m  (x=5.14..7.38)
+        //   SL:  3.64m  (x=3.74..7.38)
         //
-        // VERTICAL stacking (z from front=0 to back=9.96):
-        //   ESTAC: z=0.12-2.66 (2.54m)
-        //   QT2:   z=2.78-5.28 (2.50m)
-        //   QT1:   z=5.40-8.42 (3.02m)
-        //   BWH_Sup: z=8.54-9.84 (1.30m)
-        //   SL:    z=0.12-4.12 (4.00m)
-        //   CZ:    z=4.24-7.26 (3.02m)
-        //   AS:    z=7.38-9.84 (2.46m)
-        //   BWH:   z=5.40-7.28 (1.88m)
-        //   CIRC:  0.90m x 5.84m = ~5.28m²
+        // DEPTH STACK (z, front=0 back=9.96):
+        //   ESTAC:   z=0.12..2.66  (2.54m internal)
+        //   QT2:     z=2.78..5.28  (2.50m)
+        //   QT1:     z=5.40..8.42  (3.02m)
+        //   BWH_Sup: z=8.54..9.84  (1.30m)
+        //   SL:      z=0.12..4.12  (4.00m)
+        //   CZ:      z=4.24..7.12  (2.88m)
+        //   AS:      z=7.24..9.84  (2.60m)
+        //   BWH:     z=6.42..8.42  (2.00m)
+        //   CIRC:    0.90 x 5.84 = ~5.28m2
+
+        // ===== CANVAS TEXTURES =====
+        function makeWoodTex() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+            const g = c.getContext('2d');
+            g.fillStyle = '#c4956a'; g.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 30; i++) {
+                g.strokeStyle = `rgba(139,90,43,${0.08 + Math.random()*0.12})`;
+                g.lineWidth = 0.5 + Math.random()*1.5;
+                g.beginPath();
+                const y = Math.random()*256;
+                for (let x = 0; x < 256; x += 8) g.lineTo(x, y + Math.sin(x*0.04)*2 + Math.random()*0.5);
+                g.stroke();
+            }
+            for (let x = 0; x < 256; x += 42) {
+                g.strokeStyle = 'rgba(100,60,20,0.25)'; g.lineWidth = 1;
+                g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke();
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+            return t;
+        }
+        function makeMarbleTex() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+            const g = c.getContext('2d');
+            g.fillStyle = '#f0ece6'; g.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 12; i++) {
+                g.strokeStyle = `rgba(180,170,160,${0.1 + Math.random()*0.15})`;
+                g.lineWidth = 0.5 + Math.random()*1.5;
+                g.beginPath();
+                let x = Math.random()*256, y = Math.random()*256;
+                g.moveTo(x, y);
+                for (let j = 0; j < 8; j++) {
+                    x += (Math.random()-0.5)*60; y += (Math.random()-0.5)*60;
+                    g.lineTo(x, y);
+                }
+                g.stroke();
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+            return t;
+        }
+        function makeTileTex(tileW, tileH, baseCol, groutCol) {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+            const g = c.getContext('2d');
+            g.fillStyle = groutCol || '#c8c0b8'; g.fillRect(0, 0, 256, 256);
+            const tw = tileW || 64, th = tileH || 64;
+            for (let y = 0; y < 256; y += th) {
+                for (let x = 0; x < 256; x += tw) {
+                    const r = Math.random()*8 - 4;
+                    g.fillStyle = baseCol || `rgb(${215+r},${210+r},${200+r})`;
+                    g.fillRect(x+1, y+1, tw-2, th-2);
+                }
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+            return t;
+        }
+        function makeConcreteTex() {
+            const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+            const g = c.getContext('2d');
+            g.fillStyle = '#a0a0a0'; g.fillRect(0, 0, 128, 128);
+            for (let i = 0; i < 300; i++) {
+                const v = 140 + Math.random()*40;
+                g.fillStyle = `rgba(${v},${v},${v},0.3)`;
+                g.fillRect(Math.random()*128, Math.random()*128, 1+Math.random()*3, 1+Math.random()*3);
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3);
+            return t;
+        }
 
         // ===== MATERIALS =====
+        const woodMap = makeWoodTex();
+        const marbleMap = makeMarbleTex();
+        const kitchenMap = makeTileTex(48, 48, '#d8d2ca', '#b8b0a8');
+        const corridorMap = makeTileTex(40, 40, '#ddd8d0', '#c0b8b0');
+        const concreteMap = makeConcreteTex();
+        const slFloorMap = makeTileTex(56, 56, '#e2ddd5', '#c8c0b8');
+
         const mat = {
-            wall: new THREE.MeshStandardMaterial({ color: 0xb0a590, roughness: 0.75 }),
-            wallExt: new THREE.MeshStandardMaterial({ color: 0x8a8278, roughness: 0.6 }),
-            floorBase: new THREE.MeshStandardMaterial({ color: 0xe0d8cc, roughness: 0.45 }),
-            floorWood: new THREE.MeshStandardMaterial({ color: 0xc49060, roughness: 0.5 }),
-            floorMarble: new THREE.MeshStandardMaterial({ color: 0xe8e4e0, roughness: 0.12 }),
-            floorKitchen: new THREE.MeshStandardMaterial({ color: 0xd0ccc5, roughness: 0.25 }),
-            floorParking: new THREE.MeshStandardMaterial({ color: 0xa8a8a8, roughness: 0.85 }),
-            floorCorridor: new THREE.MeshStandardMaterial({ color: 0xd8d0c4, roughness: 0.35 }),
+            wall: new THREE.MeshStandardMaterial({ color: 0xd4c8b0, roughness: 0.7 }),
+            wallExt: new THREE.MeshStandardMaterial({ color: 0xc0b8a8, roughness: 0.55 }),
+            floorWood: new THREE.MeshStandardMaterial({ map: woodMap, roughness: 0.45 }),
+            floorMarble: new THREE.MeshStandardMaterial({ map: marbleMap, roughness: 0.1, metalness: 0.02 }),
+            floorKitchen: new THREE.MeshStandardMaterial({ map: kitchenMap, roughness: 0.25 }),
+            floorCorridor: new THREE.MeshStandardMaterial({ map: corridorMap, roughness: 0.3 }),
+            floorParking: new THREE.MeshStandardMaterial({ map: concreteMap, roughness: 0.85 }),
+            floorSL: new THREE.MeshStandardMaterial({ map: slFloorMap, roughness: 0.35 }),
             slab: new THREE.MeshStandardMaterial({ color: 0x909090, roughness: 0.5, side: THREE.DoubleSide }),
             glass: new THREE.MeshStandardMaterial({ color: 0x88ccee, transparent: true, opacity: 0.3, roughness: 0.05 }),
             door: new THREE.MeshStandardMaterial({ color: 0x8B6914, roughness: 0.5 }),
+            doorFront: new THREE.MeshStandardMaterial({ color: 0x7a5520, roughness: 0.4 }),
             ground: new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 1.0 }),
-            bed: new THREE.MeshStandardMaterial({ color: 0xf0e8d8, roughness: 0.85 }),
-            pillow: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }),
-            blanket: new THREE.MeshStandardMaterial({ color: 0xc4a882, roughness: 0.8 }),
-            sofa: new THREE.MeshStandardMaterial({ color: 0x9e8b70, roughness: 0.7 }),
-            sofaCushion: new THREE.MeshStandardMaterial({ color: 0xc4b198, roughness: 0.75 }),
-            counter: new THREE.MeshStandardMaterial({ color: 0x505050, roughness: 0.2, metalness: 0.1 }),
-            cabinet: new THREE.MeshStandardMaterial({ color: 0xa07850, roughness: 0.55 }),
-            cabinetDark: new THREE.MeshStandardMaterial({ color: 0x785030, roughness: 0.5 }),
-            car: new THREE.MeshStandardMaterial({ color: 0xc8c8c8, roughness: 0.12, metalness: 0.9 }),
-            carWindow: new THREE.MeshStandardMaterial({ color: 0x2a3a4a, transparent: true, opacity: 0.5 }),
-            tv: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.05 }),
-            plant: new THREE.MeshStandardMaterial({ color: 0x2d7a1e, roughness: 0.9 }),
-            pot: new THREE.MeshStandardMaterial({ color: 0x8b5e3c, roughness: 0.75 }),
-            sink: new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.12 }),
-            appliance: new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.2 }),
-            rug: new THREE.MeshStandardMaterial({ color: 0xbfa882, roughness: 0.9 }),
-            tile: new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.15 }),
-            facade: new THREE.MeshStandardMaterial({ color: 0x7a7570, roughness: 0.55 }),
+            bed: new THREE.MeshStandardMaterial({ color: 0xf5ede0, roughness: 0.8 }),
+            pillow: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65 }),
+            blanket: new THREE.MeshStandardMaterial({ color: 0xc8a882, roughness: 0.75 }),
+            headboard: new THREE.MeshStandardMaterial({ color: 0x6a5040, roughness: 0.5 }),
+            sofa: new THREE.MeshStandardMaterial({ color: 0xa09080, roughness: 0.65 }),
+            sofaCushion: new THREE.MeshStandardMaterial({ color: 0xc8b8a0, roughness: 0.7 }),
+            counter: new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.15, metalness: 0.1 }),
+            counterTop: new THREE.MeshStandardMaterial({ color: 0xe8e4e0, roughness: 0.08 }),
+            cabinet: new THREE.MeshStandardMaterial({ color: 0xa07850, roughness: 0.5 }),
+            cabinetDark: new THREE.MeshStandardMaterial({ color: 0x6a4830, roughness: 0.45 }),
+            car: new THREE.MeshStandardMaterial({ color: 0xd0d0d0, roughness: 0.1, metalness: 0.85 }),
+            carWindow: new THREE.MeshStandardMaterial({ color: 0x1a2a3a, transparent: true, opacity: 0.55, roughness: 0.02 }),
+            tv: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.03, metalness: 0.5 }),
+            plant: new THREE.MeshStandardMaterial({ color: 0x2d7a1e, roughness: 0.85 }),
+            pot: new THREE.MeshStandardMaterial({ color: 0x8b5e3c, roughness: 0.7 }),
+            sink: new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.08, metalness: 0.15 }),
+            appliance: new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.15 }),
+            rug: new THREE.MeshStandardMaterial({ color: 0xc0a880, roughness: 0.9 }),
+            tile: new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.1 }),
+            facade: new THREE.MeshStandardMaterial({ color: 0x8a8580, roughness: 0.5 }),
+            chrome: new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.05, metalness: 0.9 }),
+            stove: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3 }),
         };
 
         // ===== GROUPS =====
@@ -209,54 +292,60 @@
         scene.add(roofG, labelG, dimG, furnG);
 
         // ===== LIGHTING =====
-        scene.add(new THREE.AmbientLight(0xffffff, 0.50));
-        const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+        const sun = new THREE.DirectionalLight(0xfff5e0, 1.5);
         sun.position.set(8, 18, 6);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
         const sc = sun.shadow.camera;
         sc.left = -15; sc.right = 15; sc.top = 15; sc.bottom = -15; sc.near = 0.5; sc.far = 40;
         scene.add(sun);
-        scene.add(new THREE.DirectionalLight(0xc0d0ff, 0.25).position.set(-6, 12, -4) && new THREE.DirectionalLight(0xc0d0ff, 0.25));
-        scene.add(new THREE.HemisphereLight(0xb8d4e3, 0x5a8a3a, 0.3));
+        const fill = new THREE.DirectionalLight(0xc0d0ff, 0.3);
+        fill.position.set(-6, 12, -4);
+        scene.add(fill);
+        scene.add(new THREE.HemisphereLight(0xb8d4e3, 0x5a8a3a, 0.35));
 
         // ===== HELPERS =====
         function box(w, h, d, m, x, y, z) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
             mesh.position.set(x, y, z);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+            mesh.castShadow = true; mesh.receiveShadow = true;
             return mesh;
         }
         function cyl(r, h, m, x, y, z, segs) {
             const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, segs || 16), m);
             mesh.position.set(x, y, z);
-            mesh.castShadow = true;
+            mesh.castShadow = true; mesh.receiveShadow = true;
             return mesh;
         }
         function wallX(x1, x2, z, h) { return box(Math.abs(x2-x1), h||H, W, mat.wall, (x1+x2)/2, (h||H)/2, z); }
         function wallZ(z1, z2, x, h) { return box(W, h||H, Math.abs(z2-z1), mat.wall, x, (h||H)/2, (z1+z2)/2); }
 
-        function addWall(isX, start, end, coord, openings, wallH) {
+        function addWall(isX, start, end, coord, openings, wallH, wallMat) {
             const g = new THREE.Group();
             const ops = [...openings].sort((a,b) => a.at - b.at);
             let cur = start;
             const wh = wallH || H;
+            const wm = wallMat || mat.wall;
             for (const op of ops) {
                 const s = op.at - op.w/2, e = op.at + op.w/2;
                 if (cur < s - 0.001) {
-                    if (isX) g.add(wallX(cur, s, coord, wh));
-                    else g.add(wallZ(cur, s, coord, wh));
+                    const seg = isX
+                        ? box(s-cur, wh, W, wm, (cur+s)/2, wh/2, coord)
+                        : box(W, wh, s-cur, wm, coord, wh/2, (cur+s)/2);
+                    seg.castShadow = true; seg.receiveShadow = true;
+                    g.add(seg);
                 }
                 if (op.type === 'win') {
                     const sill = op.sill != null ? op.sill : 1.0;
                     if (sill > 0.01) {
-                        if (isX) g.add(wallX(s, e, coord, sill));
-                        else g.add(wallZ(s, e, coord, sill));
+                        g.add(isX
+                            ? box(op.w, sill, W, wm, op.at, sill/2, coord)
+                            : box(W, sill, op.w, wm, coord, sill/2, op.at));
                     }
                     const above = wh - sill - op.h;
                     if (above > 0.01) {
-                        g.add(box(isX ? op.w : W, above, isX ? W : op.w, mat.wall,
+                        g.add(box(isX ? op.w : W, above, isX ? W : op.w, wm,
                             isX ? op.at : coord, sill + op.h + above/2, isX ? coord : op.at));
                     }
                     g.add(box(isX ? op.w : 0.03, op.h, isX ? 0.03 : op.w, mat.glass,
@@ -264,17 +353,21 @@
                 } else if (op.type === 'door') {
                     const above = wh - op.h;
                     if (above > 0.02) {
-                        g.add(box(isX ? op.w : W, above, isX ? W : op.w, mat.wall,
+                        g.add(box(isX ? op.w : W, above, isX ? W : op.w, wm,
                             isX ? op.at : coord, op.h + above/2, isX ? coord : op.at));
                     }
-                    g.add(box(isX ? op.w*0.92 : 0.05, op.h*0.96, isX ? 0.05 : op.w*0.92, mat.door,
+                    const dm = op.mat || mat.door;
+                    g.add(box(isX ? op.w*0.92 : 0.05, op.h*0.96, isX ? 0.05 : op.w*0.92, dm,
                         isX ? op.at : coord, op.h*0.48, isX ? coord : op.at));
                 } else if (op.type === 'garage') { /* open */ }
                 cur = e;
             }
             if (cur < end - 0.001) {
-                if (isX) g.add(wallX(cur, end, coord, wh));
-                else g.add(wallZ(cur, end, coord, wh));
+                const seg = isX
+                    ? box(end-cur, wh, W, wm, (cur+end)/2, wh/2, coord)
+                    : box(W, wh, end-cur, wm, coord, wh/2, (cur+end)/2);
+                seg.castShadow = true; seg.receiveShadow = true;
+                g.add(seg);
             }
             return g;
         }
@@ -308,235 +401,303 @@
         const ground = box(50, 0.05, 50, mat.ground, 3.75, -0.03, 4.98);
         ground.receiveShadow = true;
         scene.add(ground);
-        // Driveway
-        scene.add(box(4.5, 0.02, 5, new THREE.MeshStandardMaterial({color:0x909090, roughness:0.9}), 1.87, -0.01, -2.0));
+        scene.add(box(4.5, 0.02, 5, new THREE.MeshStandardMaterial({color:0x888888, roughness:0.9}), 1.87, -0.01, -2.0));
 
-        // ===== FLOOR SLABS PER ROOM =====
+        // ===== FLOOR SLABS =====
         const fy = 0.02;
-        scene.add(box(3.26, 0.03, 1.30, mat.floorMarble, 1.75, fy, 9.19));          // BWH Sup
-        scene.add(box(3.30, 0.03, 3.02, mat.floorWood, 1.77, fy, 6.91));            // QT1
-        scene.add(box(1.60, 0.03, 1.88, mat.floorMarble, 4.34, fy, 6.34));          // BWH
-        scene.add(box(0.90, 0.03, 2.56, mat.floorCorridor, 4.57, fy, 4.06));        // Corridor lower (QT2 level)
-        scene.add(box(0.90, 0.03, 1.20, mat.floorCorridor, 4.57, fy, 7.88));        // Corridor upper (above BWH)
-        scene.add(box(3.88, 0.03, 2.50, mat.floorWood, 2.06, fy, 4.03));            // QT2 (wider!)
-        scene.add(box(2.24, 0.03, 3.02, mat.floorKitchen, 6.26, fy, 5.75));         // CZ
-        scene.add(box(2.24, 0.03, 2.46, mat.floorMarble, 6.26, fy, 8.61));          // AS
-        scene.add(box(3.50, 0.03, 2.54, mat.floorParking, 1.87, fy, 1.39));         // ESTACION
-        scene.add(box(3.64, 0.03, 4.00, mat.floorBase, 5.56, fy, 2.12));            // SL
+        // BWH Sup: x=0.12..3.38 (3.26), z=8.54..9.84 (1.30)
+        scene.add(box(3.26, 0.03, 1.30, mat.floorMarble, 1.75, fy, 9.19));
+        // QT1: x=0.12..3.42 (3.30), z=5.40..8.42 (3.02)
+        scene.add(box(3.30, 0.03, 3.02, mat.floorWood, 1.77, fy, 6.91));
+        // BWH: x=3.54..5.02 (1.48), z=6.42..8.42 (2.00)
+        scene.add(box(1.48, 0.03, 2.00, mat.floorMarble, 4.28, fy, 7.42));
+        // Corridor access (QT1 level): x=3.54..5.02 (1.48), z=5.40..6.42 (1.02)
+        scene.add(box(1.48, 0.03, 1.02, mat.floorCorridor, 4.28, fy, 5.91));
+        // Corridor (QT2 level): x=4.12..5.02 (0.90), z=2.78..5.28 (2.50)
+        scene.add(box(0.90, 0.03, 2.50, mat.floorCorridor, 4.57, fy, 4.03));
+        // Corridor upper: x=3.54..5.02, z=8.42..8.54 (access to BWH_Sup)
+        scene.add(box(1.48, 0.03, 0.12, mat.floorCorridor, 4.28, fy, 8.48));
+        // QT2: x=0.12..4.00 (3.88), z=2.78..5.28 (2.50)
+        scene.add(box(3.88, 0.03, 2.50, mat.floorWood, 2.06, fy, 4.03));
+        // CZ: x=5.14..7.38 (2.24), z=4.24..7.12 (2.88)
+        scene.add(box(2.24, 0.03, 2.88, mat.floorKitchen, 6.26, fy, 5.68));
+        // AS: x=5.14..7.38 (2.24), z=7.24..9.84 (2.60)
+        scene.add(box(2.24, 0.03, 2.60, mat.floorMarble, 6.26, fy, 8.54));
+        // ESTACION: x=0.12..3.62 (3.50), z=0.12..2.66 (2.54)
+        scene.add(box(3.50, 0.03, 2.54, mat.floorParking, 1.87, fy, 1.39));
+        // SL: x=3.74..7.38 (3.64), z=0.12..4.12 (4.00)
+        scene.add(box(3.64, 0.03, 4.00, mat.floorSL, 5.56, fy, 2.12));
 
         // ===== EXTERNAL WALLS =====
-        // Front wall (z=0)
-        scene.add(addWall(true, 0, 7.50, 0, [
+        // Front wall (z=0.06)
+        scene.add(addWall(true, 0, 7.50, 0.06, [
             { at: 1.87, w: 3.00, h: 2.50, type: 'garage', sill: 0 },
-            { at: 5.56, w: 2.00, h: 2.50, type: 'win', sill: 0 },
-        ]));
-        // Back wall (z=9.96)
-        scene.add(addWall(true, 0, 7.50, 9.96, [
-            { at: 1.75, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
+            { at: 3.85, w: 0.90, h: 2.10, type: 'door', mat: mat.doorFront },
+            { at: 5.70, w: 2.00, h: 2.50, type: 'win', sill: 0 },
+        ], H, mat.wallExt));
+        // Back wall (z=9.90)
+        scene.add(addWall(true, 0, 7.50, 9.90, [
+            { at: 2.00, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
             { at: 6.26, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
-        ]));
-        // Left wall (x=0)
-        scene.add(addWall(false, 0, 9.96, 0, [
+        ], H, mat.wallExt));
+        // Left wall (x=0.06)
+        scene.add(addWall(false, 0, 9.96, 0.06, [
             { at: 4.03, w: 1.40, h: 1.20, type: 'win', sill: 1.00 },
             { at: 6.91, w: 1.60, h: 1.20, type: 'win', sill: 1.00 },
-        ]));
-        // Right wall (x=7.50)
-        scene.add(addWall(false, 0, 9.96, 7.50, [
-            { at: 2.12, w: 2.00, h: 2.50, type: 'win', sill: 0 },
-            { at: 5.75, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
-            { at: 8.20, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
-            { at: 9.20, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
-        ]));
+        ], H, mat.wallExt));
+        // Right wall (x=7.44)
+        scene.add(addWall(false, 0, 9.96, 7.44, [
+            { at: 2.12, w: 1.60, h: 1.20, type: 'win', sill: 1.00 },
+            { at: 5.68, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
+            { at: 6.50, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
+            { at: 8.54, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
+            { at: 9.30, w: 0.60, h: 0.60, type: 'win', sill: 1.80 },
+        ], H, mat.wallExt));
 
         // ===== INTERNAL WALLS =====
 
         // -- Horizontal walls (along X) --
-
-        // BWH_Sup / QT1 divider z=8.48
-        scene.add(addWall(true, 0, 3.48, 8.48, [
-            { at: 2.50, w: 0.70, h: 2.10, type: 'door' },
+        // BWH_Sup / QT1 divider: z=8.48, x=0.06..5.08
+        scene.add(addWall(true, 0.06, 5.08, 8.48, [
+            { at: 2.00, w: 0.70, h: 2.10, type: 'door' },
         ]));
 
-        // QT1 bottom wall z=5.34 (LEFT section: x=0 to 3.48)
-        scene.add(addWall(true, 0, 3.48, 5.34, [
-            { at: 2.80, w: 0.70, h: 2.10, type: 'door' },
+        // QT1/QT2 divider (left): z=5.34, x=0.06..3.48
+        scene.add(addWall(true, 0.06, 3.48, 5.34, []));
+
+        // Step wall z=5.34, x=3.48..4.06
+        scene.add(wallX(3.48, 4.06, 5.34));
+
+        // BWH bottom: z=6.36, x=3.48..5.08
+        scene.add(addWall(true, 3.48, 5.08, 6.36, [
+            { at: 4.28, w: 0.70, h: 2.10, type: 'door' },
         ]));
 
-        // Step wall at z=5.34 connecting QT1 right wall (x=3.48) to QT2 right wall (x=4.06)
-        scene.add(wallX(3.48, 4.12, 5.34));
+        // CZ/AS divider: z=7.18, x=5.08..7.44
+        scene.add(addWall(true, 5.08, 7.44, 7.18, []));
 
-        // BWH top wall z=7.28 (center: x=3.48 to 5.20)
-        scene.add(addWall(true, 3.48, 5.20, 7.28, [
-            { at: 4.34, w: 0.70, h: 2.10, type: 'door' },
+        // ESTACION/QT2 wall: z=2.72, x=0.06..3.68
+        scene.add(wallX(0.06, 3.68, 2.72));
+
+        // SL/corridor/CZ divider: z=4.18, x=3.68..7.44
+        scene.add(addWall(true, 3.68, 7.44, 4.18, [
+            { at: 4.57, w: 0.80, h: 2.10, type: 'door' },
         ]));
 
-        // BWH bottom wall z=5.34 (center section: x=3.48 to 5.20)
-        scene.add(wallX(3.48, 5.20, 5.34));
-
-        // CZ/AS divider z=7.26 (right: x=5.08 to 7.50)
-        scene.add(addWall(true, 5.08, 7.50, 7.26, [
-            { at: 5.70, w: 0.70, h: 2.10, type: 'door' },
-        ]));
-
-        // ESTACION/QT2 wall z=2.72 (x=0 to 4.12)
-        scene.add(addWall(true, 0, 4.12, 2.72, [
-            { at: 2.00, w: 0.80, h: 2.10, type: 'door' },
-        ]));
-
-        // SL/CZ divider z=4.18 (x=5.02 to 7.50)
-        scene.add(addWall(true, 5.02, 7.50, 4.18, [
-            { at: 6.00, w: 0.80, h: 2.10, type: 'door' },
+        // ESTACION/QT2 wall (right section, corridor): z=2.72, x=3.68..5.08
+        scene.add(addWall(true, 3.68, 5.08, 2.72, [
+            { at: 4.38, w: 0.80, h: 2.10, type: 'door' },
         ]));
 
         // -- Vertical walls (along Z) --
+        // QT1 right / BWH-corridor left (x=3.48, z=5.34..8.48)
+        scene.add(addWall(false, 5.34, 8.48, 3.48, [
+            { at: 5.90, w: 0.70, h: 2.10, type: 'door' },
+        ]));
 
-        // QT1 right wall (x=3.48, z=5.34 to 9.84)
-        scene.add(addWall(false, 5.34, 9.84, 3.48, []));
+        // BWH_Sup right (x=3.44, z=8.48..9.90) - slightly narrower than QT1
+        scene.add(wallZ(8.48, 9.90, 3.44));
 
-        // QT2 right wall / corridor left wall (x=4.06, z=2.72 to 5.34)
+        // QT2 right / corridor left (x=4.06, z=2.72..5.34)
         scene.add(addWall(false, 2.72, 5.34, 4.06, [
-            { at: 4.03, w: 0.90, h: 2.10, type: 'door' },
+            { at: 4.20, w: 0.90, h: 2.10, type: 'door' },
         ]));
 
-        // Corridor right wall / CZ-AS divider (x=5.08, z=2.72 to 9.84)
-        scene.add(addWall(false, 2.72, 9.84, 5.08, [
-            { at: 3.40, w: 0.80, h: 2.10, type: 'door' },
-            { at: 6.30, w: 0.80, h: 2.10, type: 'door' },
+        // Corridor right / CZ-AS left (x=5.08, z=2.72..9.90)
+        scene.add(addWall(false, 2.72, 9.90, 5.08, [
+            { at: 5.68, w: 0.80, h: 2.10, type: 'door' },
+            { at: 8.10, w: 0.80, h: 2.10, type: 'door' },
         ]));
 
-        // ESTACION/SL divider (x=3.68, z=0 to 2.72)
-        scene.add(addWall(false, 0, 2.72, 3.68, [
+        // ESTACION / SL divider (x=3.68, z=0.06..2.72)
+        scene.add(addWall(false, 0.06, 2.72, 3.68, [
             { at: 1.80, w: 0.90, h: 2.10, type: 'door' },
         ]));
 
         // ===== FURNITURE =====
 
-        // --- BWH Superior ---
-        furnG.add(box(0.80, 0.08, 0.80, mat.tile, 0.60, 0.04, 9.40));
-        furnG.add(box(0.03, 1.80, 0.80, mat.glass, 1.02, 0.94, 9.40));
-        furnG.add(cyl(0.08, 0.02, mat.sink, 0.60, 1.90, 9.40));
-        furnG.add(box(0.38, 0.35, 0.55, mat.sink, 1.80, 0.18, 9.55));
-        furnG.add(box(0.32, 0.08, 0.32, mat.sink, 1.80, 0.38, 9.68));
-        furnG.add(box(0.50, 0.80, 0.40, mat.cabinet, 2.80, 0.40, 9.55));
-        furnG.add(box(0.45, 0.06, 0.35, mat.sink, 2.80, 0.84, 9.55));
-        furnG.add(box(0.40, 0.50, 0.02, mat.glass, 2.80, 1.50, 9.80));
+        // --- BWH Superior (bathroom, z=8.54..9.84, x=0.12..3.38) ---
+        // Shower stall
+        furnG.add(box(0.90, 0.08, 0.90, mat.tile, 0.57, 0.04, 9.39));
+        furnG.add(box(0.03, 1.90, 0.90, mat.glass, 1.08, 0.99, 9.39));
+        furnG.add(cyl(0.10, 0.02, mat.chrome, 0.57, 2.00, 9.39));
+        // Toilet
+        furnG.add(box(0.38, 0.35, 0.55, mat.sink, 1.80, 0.18, 9.58));
+        furnG.add(box(0.34, 0.12, 0.20, mat.sink, 1.80, 0.41, 9.72));
+        furnG.add(cyl(0.15, 0.04, mat.sink, 1.80, 0.37, 9.48, 20));
+        // Sink vanity
+        furnG.add(box(0.70, 0.80, 0.45, mat.cabinet, 2.80, 0.40, 9.60));
+        furnG.add(box(0.65, 0.04, 0.42, mat.counterTop, 2.80, 0.82, 9.60));
+        furnG.add(cyl(0.14, 0.06, mat.sink, 2.80, 0.86, 9.55, 20));
+        furnG.add(box(0.45, 0.55, 0.03, mat.glass, 2.80, 1.55, 9.82));
 
-        // --- QT 1 (master bedroom) ---
-        furnG.add(box(1.60, 0.30, 2.10, mat.bed, 1.77, 0.18, 7.20));
-        furnG.add(box(1.50, 0.15, 2.00, mat.blanket, 1.77, 0.38, 7.15));
-        furnG.add(box(1.60, 0.60, 0.08, mat.cabinetDark, 1.77, 0.50, 8.22));
-        furnG.add(box(0.50, 0.12, 0.30, mat.pillow, 1.37, 0.48, 8.00));
-        furnG.add(box(0.50, 0.12, 0.30, mat.pillow, 2.17, 0.48, 8.00));
-        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 0.45, 0.25, 7.80));
-        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 3.10, 0.25, 7.80));
-        furnG.add(box(2.00, 2.20, 0.55, mat.cabinetDark, 1.77, 1.10, 5.68));
-        furnG.add(box(1.20, 0.01, 0.80, mat.rug, 1.77, 0.04, 6.20));
+        // --- QT 1 (master, z=5.40..8.42, x=0.12..3.42) ---
+        // Double bed
+        furnG.add(box(1.60, 0.08, 2.10, mat.cabinetDark, 1.77, 0.16, 7.10));
+        furnG.add(box(1.55, 0.22, 2.05, mat.bed, 1.77, 0.33, 7.10));
+        furnG.add(box(1.45, 0.08, 1.60, mat.blanket, 1.77, 0.48, 6.90));
+        furnG.add(box(1.60, 0.55, 0.08, mat.headboard, 1.77, 0.50, 8.12));
+        furnG.add(box(0.45, 0.14, 0.35, mat.pillow, 1.37, 0.52, 7.85));
+        furnG.add(box(0.45, 0.14, 0.35, mat.pillow, 2.17, 0.52, 7.85));
+        // Nightstands
+        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 0.45, 0.25, 7.70));
+        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 3.10, 0.25, 7.70));
+        // Table lamps
+        furnG.add(cyl(0.06, 0.25, mat.chrome, 0.45, 0.62, 7.70, 8));
+        furnG.add(cyl(0.10, 0.02, new THREE.MeshStandardMaterial({color:0xfff8e0, emissive:0xfff0c0, emissiveIntensity:0.3}), 0.45, 0.76, 7.70, 8));
+        furnG.add(cyl(0.06, 0.25, mat.chrome, 3.10, 0.62, 7.70, 8));
+        furnG.add(cyl(0.10, 0.02, new THREE.MeshStandardMaterial({color:0xfff8e0, emissive:0xfff0c0, emissiveIntensity:0.3}), 3.10, 0.76, 7.70, 8));
+        // Wardrobe
+        furnG.add(box(2.20, 2.20, 0.55, mat.cabinetDark, 1.77, 1.10, 5.68));
+        // Rug
+        furnG.add(box(1.30, 0.01, 0.80, mat.rug, 1.77, 0.04, 6.10));
 
-        // --- BWH (shared bathroom) ---
-        furnG.add(box(0.38, 0.35, 0.55, mat.sink, 3.90, 0.18, 6.80));
-        furnG.add(box(0.32, 0.08, 0.32, mat.sink, 3.90, 0.38, 6.95));
-        furnG.add(box(0.50, 0.80, 0.40, mat.cabinet, 4.70, 0.40, 7.00));
-        furnG.add(box(0.45, 0.06, 0.35, mat.sink, 4.70, 0.84, 7.00));
-        furnG.add(box(0.40, 0.50, 0.02, mat.glass, 4.70, 1.50, 7.22));
-        furnG.add(box(0.70, 0.08, 0.70, mat.tile, 4.70, 0.04, 5.70));
-        furnG.add(box(0.03, 1.80, 0.70, mat.glass, 4.34, 0.94, 5.70));
+        // --- BWH (bathroom, z=6.42..8.42, x=3.54..5.02) ---
+        // Toilet
+        furnG.add(box(0.38, 0.35, 0.55, mat.sink, 3.90, 0.18, 7.90));
+        furnG.add(box(0.34, 0.12, 0.20, mat.sink, 3.90, 0.41, 8.04));
+        furnG.add(cyl(0.15, 0.04, mat.sink, 3.90, 0.37, 7.80, 20));
+        // Sink vanity
+        furnG.add(box(0.55, 0.80, 0.40, mat.cabinet, 4.60, 0.40, 8.15));
+        furnG.add(box(0.50, 0.04, 0.38, mat.counterTop, 4.60, 0.82, 8.15));
+        furnG.add(cyl(0.12, 0.06, mat.sink, 4.60, 0.86, 8.10, 20));
+        furnG.add(box(0.40, 0.50, 0.03, mat.glass, 4.60, 1.50, 8.38));
+        // Shower
+        furnG.add(box(0.80, 0.08, 0.80, mat.tile, 4.60, 0.04, 6.82));
+        furnG.add(box(0.03, 1.85, 0.80, mat.glass, 4.18, 0.96, 6.82));
 
-        // --- AS (laundry) ---
-        furnG.add(box(0.60, 0.85, 0.55, mat.appliance, 6.80, 0.42, 9.50));
-        furnG.add(cyl(0.18, 0.02, mat.glass, 6.80, 0.55, 9.23));
+        // --- AS (laundry, z=7.24..9.84, x=5.14..7.38) ---
+        // Washing machine
+        furnG.add(box(0.60, 0.85, 0.55, mat.appliance, 6.90, 0.42, 9.50));
+        furnG.add(cyl(0.20, 0.03, mat.glass, 6.90, 0.50, 9.22));
+        // Laundry sink (tanque)
         furnG.add(box(0.55, 0.80, 0.50, mat.sink, 5.70, 0.40, 9.50));
-        furnG.add(box(0.50, 0.15, 0.45, mat.sink, 5.70, 0.85, 9.50));
-        furnG.add(box(0.02, 0.02, 1.50, new THREE.MeshStandardMaterial({color:0x888888}), 6.26, 2.20, 8.60));
+        furnG.add(box(0.50, 0.18, 0.45, mat.sink, 5.70, 0.85, 9.50));
+        furnG.add(cyl(0.04, 0.30, mat.chrome, 5.70, 1.10, 9.72));
+        // Clothesline
+        furnG.add(box(0.02, 0.02, 1.80, mat.chrome, 6.26, 2.20, 8.50));
 
-        // --- QT 2 (bedroom 2 — wider room) ---
-        furnG.add(box(1.40, 0.30, 1.90, mat.bed, 1.50, 0.18, 4.03));
-        furnG.add(box(1.30, 0.15, 1.80, mat.blanket, 1.50, 0.38, 3.98));
-        furnG.add(box(1.40, 0.50, 0.08, mat.cabinetDark, 1.50, 0.45, 5.00));
-        furnG.add(box(0.45, 0.12, 0.28, mat.pillow, 1.15, 0.48, 4.75));
-        furnG.add(box(0.45, 0.12, 0.28, mat.pillow, 1.85, 0.48, 4.75));
-        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 0.40, 0.25, 4.50));
-        furnG.add(box(1.60, 2.20, 0.55, mat.cabinetDark, 3.10, 1.10, 3.10));
-        furnG.add(box(1.00, 0.01, 0.70, mat.rug, 1.50, 0.04, 3.10));
+        // --- QT 2 (bedroom, z=2.78..5.28, x=0.12..4.00) ---
+        // Double bed
+        furnG.add(box(1.40, 0.08, 1.90, mat.cabinetDark, 2.06, 0.16, 4.03));
+        furnG.add(box(1.35, 0.22, 1.85, mat.bed, 2.06, 0.33, 4.03));
+        furnG.add(box(1.25, 0.08, 1.40, mat.blanket, 2.06, 0.48, 3.88));
+        furnG.add(box(1.40, 0.50, 0.08, mat.headboard, 2.06, 0.45, 4.98));
+        furnG.add(box(0.42, 0.12, 0.30, mat.pillow, 1.70, 0.50, 4.75));
+        furnG.add(box(0.42, 0.12, 0.30, mat.pillow, 2.42, 0.50, 4.75));
+        // Nightstands
+        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 0.55, 0.25, 4.50));
+        furnG.add(box(0.40, 0.50, 0.40, mat.cabinet, 3.50, 0.25, 4.50));
+        // Wardrobe
+        furnG.add(box(1.80, 2.20, 0.55, mat.cabinetDark, 2.06, 1.10, 3.08));
+        // Rug
+        furnG.add(box(1.10, 0.01, 0.70, mat.rug, 2.06, 0.04, 3.30));
 
-        // --- CZ (kitchen) ---
-        furnG.add(box(1.80, 0.90, 0.55, mat.counter, 6.40, 0.45, 7.00));
-        furnG.add(box(0.55, 0.90, 2.00, mat.counter, 7.05, 0.45, 5.75));
-        furnG.add(box(1.80, 0.04, 0.55, mat.sink, 6.40, 0.92, 7.00));
-        furnG.add(box(0.55, 0.04, 2.00, mat.sink, 7.05, 0.92, 5.75));
-        furnG.add(box(0.60, 0.06, 0.50, new THREE.MeshStandardMaterial({color:0x222222}), 5.70, 0.95, 7.00));
+        // --- CZ (kitchen, z=4.24..7.12, x=5.14..7.38) ---
+        // L-shaped counter: along back wall and right wall
+        // Back counter (along z=7.00)
+        furnG.add(box(1.80, 0.90, 0.55, mat.counter, 6.35, 0.45, 6.85));
+        furnG.add(box(1.80, 0.04, 0.55, mat.counterTop, 6.35, 0.92, 6.85));
+        // Right counter (along x=7.10)
+        furnG.add(box(0.55, 0.90, 1.80, mat.counter, 7.10, 0.45, 5.80));
+        furnG.add(box(0.55, 0.04, 1.80, mat.counterTop, 7.10, 0.92, 5.80));
+        // Stove (cooktop)
+        furnG.add(box(0.60, 0.06, 0.50, mat.stove, 5.70, 0.96, 6.85));
+        const burnerM = new THREE.MeshStandardMaterial({color:0x333333, roughness:0.2});
         [[-0.15,-0.12],[0.15,-0.12],[-0.15,0.12],[0.15,0.12]].forEach(([dx,dz]) => {
-            furnG.add(cyl(0.06, 0.02, new THREE.MeshStandardMaterial({color:0x444444}), 5.70+dx, 0.99, 7.00+dz));
+            furnG.add(cyl(0.06, 0.02, burnerM, 5.70+dx, 0.99, 6.85+dz));
         });
-        furnG.add(box(0.45, 0.08, 0.35, new THREE.MeshStandardMaterial({color:0xdddddd}), 6.60, 0.96, 7.00));
-        furnG.add(box(0.65, 1.70, 0.60, mat.appliance, 5.50, 0.85, 4.60));
-        furnG.add(box(1.80, 0.50, 0.30, mat.cabinet, 6.40, 1.80, 7.08));
-        furnG.add(box(0.30, 0.50, 1.20, mat.cabinet, 7.15, 1.80, 5.90));
-        furnG.add(box(0.80, 0.02, 0.60, mat.cabinet, 5.70, 0.72, 5.40));
-        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 5.34, 0.36, 5.14));
-        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 6.06, 0.36, 5.14));
-        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 5.34, 0.36, 5.66));
-        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 6.06, 0.36, 5.66));
+        // Sink
+        furnG.add(box(0.45, 0.10, 0.38, mat.sink, 6.55, 0.95, 6.85));
+        // Fridge
+        furnG.add(box(0.65, 1.75, 0.60, mat.appliance, 5.50, 0.87, 4.60));
+        furnG.add(box(0.60, 0.85, 0.03, mat.chrome, 5.50, 1.30, 4.30));
+        furnG.add(box(0.60, 0.85, 0.03, mat.chrome, 5.50, 0.44, 4.30));
+        // Upper cabinets
+        furnG.add(box(1.80, 0.45, 0.30, mat.cabinet, 6.35, 1.75, 7.00));
+        furnG.add(box(0.30, 0.45, 1.20, mat.cabinet, 7.20, 1.75, 5.90));
+        // Dining table with chairs
+        furnG.add(box(0.80, 0.02, 0.60, mat.cabinet, 5.80, 0.72, 5.20));
+        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 5.44, 0.36, 4.94));
+        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 6.16, 0.36, 4.94));
+        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 5.44, 0.36, 5.46));
+        furnG.add(box(0.04, 0.70, 0.04, mat.cabinetDark, 6.16, 0.36, 5.46));
 
-        // --- SL (living room) ---
-        furnG.add(box(2.00, 0.35, 0.85, mat.sofa, 5.56, 0.22, 3.10));
-        furnG.add(box(2.00, 0.40, 0.12, mat.sofa, 5.56, 0.52, 3.48));
-        furnG.add(box(0.12, 0.35, 0.85, mat.sofa, 4.56, 0.42, 3.10));
-        furnG.add(box(0.12, 0.35, 0.85, mat.sofa, 6.56, 0.42, 3.10));
-        furnG.add(box(0.55, 0.10, 0.50, mat.sofaCushion, 5.06, 0.42, 3.00));
-        furnG.add(box(0.55, 0.10, 0.50, mat.sofaCushion, 5.56, 0.42, 3.00));
-        furnG.add(box(0.55, 0.10, 0.50, mat.sofaCushion, 6.06, 0.42, 3.00));
-        furnG.add(box(0.90, 0.03, 0.50, mat.counter, 5.56, 0.38, 2.20));
-        furnG.add(box(0.04, 0.35, 0.04, mat.cabinetDark, 5.16, 0.18, 1.99));
-        furnG.add(box(0.04, 0.35, 0.04, mat.cabinetDark, 5.96, 0.18, 1.99));
-        furnG.add(box(0.04, 0.35, 0.04, mat.cabinetDark, 5.16, 0.18, 2.41));
-        furnG.add(box(0.04, 0.35, 0.04, mat.cabinetDark, 5.96, 0.18, 2.41));
-        furnG.add(box(1.40, 0.45, 0.35, mat.cabinet, 5.56, 0.22, 0.55));
-        furnG.add(box(1.10, 0.65, 0.04, mat.tv, 5.56, 0.75, 0.42));
-        furnG.add(box(1.60, 0.01, 1.20, mat.rug, 5.56, 0.04, 2.40));
-        furnG.add(box(0.60, 0.30, 0.20, mat.cabinet, 4.10, 1.50, 0.25));
+        // --- SL (living room, z=0.12..4.12, x=3.74..7.38) ---
+        // Sofa (3-seater)
+        furnG.add(box(2.10, 0.35, 0.80, mat.sofa, 5.56, 0.22, 3.10));
+        furnG.add(box(2.10, 0.38, 0.12, mat.sofa, 5.56, 0.54, 3.48));
+        furnG.add(box(0.12, 0.38, 0.80, mat.sofa, 4.50, 0.42, 3.10));
+        furnG.add(box(0.12, 0.38, 0.80, mat.sofa, 6.62, 0.42, 3.10));
+        // Cushions
+        furnG.add(box(0.58, 0.12, 0.55, mat.sofaCushion, 5.00, 0.42, 3.00));
+        furnG.add(box(0.58, 0.12, 0.55, mat.sofaCushion, 5.56, 0.42, 3.00));
+        furnG.add(box(0.58, 0.12, 0.55, mat.sofaCushion, 6.12, 0.42, 3.00));
+        // Coffee table
+        furnG.add(box(0.90, 0.04, 0.50, mat.counterTop, 5.56, 0.40, 2.20));
+        furnG.add(box(0.04, 0.38, 0.04, mat.cabinetDark, 5.16, 0.19, 1.99));
+        furnG.add(box(0.04, 0.38, 0.04, mat.cabinetDark, 5.96, 0.19, 1.99));
+        furnG.add(box(0.04, 0.38, 0.04, mat.cabinetDark, 5.16, 0.19, 2.41));
+        furnG.add(box(0.04, 0.38, 0.04, mat.cabinetDark, 5.96, 0.19, 2.41));
+        // TV unit
+        furnG.add(box(1.50, 0.45, 0.35, mat.cabinet, 5.56, 0.22, 0.50));
+        furnG.add(box(1.20, 0.68, 0.04, mat.tv, 5.56, 0.78, 0.38));
+        // Rug
+        furnG.add(box(1.80, 0.01, 1.30, mat.rug, 5.56, 0.04, 2.30));
+        // Shelf / decoration
+        furnG.add(box(0.60, 0.20, 0.15, mat.cabinet, 4.10, 1.50, 0.25));
 
-        // --- ESTACION (parking) --- Silver SUV (Range Rover style)
+        // --- ESTACION (parking) --- Silver SUV ---
         const carG = new THREE.Group();
+        // Body
         carG.add(box(1.80, 0.50, 4.20, mat.car, 0, 0.42, 0));
+        // Cabin
         carG.add(box(1.65, 0.50, 2.40, mat.car, 0, 0.92, -0.15));
+        // Windshield
         carG.add(box(1.58, 0.44, 0.55, mat.carWindow, 0, 0.94, -1.10));
+        // Rear window
         carG.add(box(1.58, 0.38, 0.45, mat.carWindow, 0, 0.92, 0.75));
+        // Side windows
         carG.add(box(0.03, 0.38, 1.50, mat.carWindow, -0.82, 0.94, -0.15));
         carG.add(box(0.03, 0.38, 1.50, mat.carWindow, 0.82, 0.94, -0.15));
+        // Wheels
         const wheelM = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.9});
         [[-0.92,-1.40],[0.92,-1.40],[-0.92,1.30],[0.92,1.30]].forEach(([wx,wz]) => {
-            const w = cyl(0.20, 0.18, wheelM, wx, 0.20, wz);
+            const w = cyl(0.22, 0.18, wheelM, wx, 0.22, wz);
             w.rotation.z = Math.PI/2;
             carG.add(w);
         });
+        // Headlights
         const lightM = new THREE.MeshStandardMaterial({color:0xffffcc, emissive:0xffffcc, emissiveIntensity:0.3});
-        carG.add(box(0.22, 0.10, 0.03, lightM, -0.65, 0.40, -2.10));
-        carG.add(box(0.22, 0.10, 0.03, lightM, 0.65, 0.40, -2.10));
+        carG.add(box(0.24, 0.10, 0.03, lightM, -0.65, 0.42, -2.10));
+        carG.add(box(0.24, 0.10, 0.03, lightM, 0.65, 0.42, -2.10));
+        // Taillights
         const tailM = new THREE.MeshStandardMaterial({color:0xff2200, emissive:0xff2200, emissiveIntensity:0.2});
-        carG.add(box(0.20, 0.08, 0.03, tailM, -0.65, 0.40, 2.10));
-        carG.add(box(0.20, 0.08, 0.03, tailM, 0.65, 0.40, 2.10));
+        carG.add(box(0.22, 0.08, 0.03, tailM, -0.65, 0.42, 2.10));
+        carG.add(box(0.22, 0.08, 0.03, tailM, 0.65, 0.42, 2.10));
+        // Grille
+        carG.add(box(1.20, 0.20, 0.04, mat.chrome, 0, 0.30, -2.12));
         carG.position.set(1.87, 0, 1.39);
         furnG.add(carG);
 
         // --- Plants ---
         function addPlant(x, y, z, sc) {
             const s = sc || 1, g = new THREE.Group();
-            g.add(cyl(0.12*s, 0.25*s, mat.pot, 0, 0.12*s, 0, 8));
+            g.add(cyl(0.12*s, 0.28*s, mat.pot, 0, 0.14*s, 0, 8));
             const f = new THREE.Mesh(new THREE.SphereGeometry(0.22*s, 8, 8), mat.plant);
-            f.position.set(0, 0.42*s, 0); f.scale.set(1, 1.3, 1);
+            f.position.set(0, 0.44*s, 0); f.scale.set(1, 1.3, 1);
             g.add(f); g.position.set(x, y, z); furnG.add(g);
         }
-        addPlant(3.80, 0, 3.80, 0.9);
-        addPlant(3.80, 0, 4.60, 0.7);
-        addPlant(0.40, 0, 5.30, 0.8);
-        addPlant(7.10, 0, 0.50, 0.7);
-        addPlant(5.20, 0, 4.20, 0.5);
-        addPlant(0.40, 0, 9.50, 0.6);
+        addPlant(3.80, 0, 3.80, 0.85);
+        addPlant(0.40, 0, 5.30, 0.75);
+        addPlant(7.00, 0, 0.50, 0.70);
+        addPlant(5.20, 0, 4.30, 0.50);
+        addPlant(0.40, 0, 9.55, 0.55);
+        addPlant(6.80, 0, 4.30, 0.45);
 
-        // ===== FACADE DETAIL (front face concrete panels) =====
-        // Modern facade accent (gray concrete band)
-        scene.add(box(7.50, 0.30, 0.06, mat.facade, 3.75, H + 0.15, -0.04));
-        scene.add(box(0.30, H, 0.06, mat.facade, 3.68, H/2, -0.04));
+        // ===== FACADE DETAIL =====
+        scene.add(box(7.50, 0.25, 0.06, mat.facade, 3.75, H + 0.12, -0.02));
+        scene.add(box(0.25, H, 0.06, mat.facade, 3.68, H/2, -0.02));
 
         // ===== CEILING / SLAB =====
         const slabMesh = box(7.50 + 2.0, SLAB, 9.96 + 2.0, mat.slab, 3.75, H + SLAB/2, 4.98);
@@ -550,12 +711,12 @@
         // ===== LABELS =====
         const rooms = [
             ['BWH Superior', '~4,23m\u00b2', 1.75, 0.3, 9.19],
-            ['QT 1', '~9,96m\u00b2', 1.77, 0.3, 6.91],
-            ['BWH', '', 4.34, 0.3, 6.34],
+            ['QT 1', '9,96m\u00b2', 1.77, 0.3, 6.91],
+            ['BWH', '', 4.28, 0.3, 7.42],
             ['CIRC', '~5,28m\u00b2', 4.57, 0.3, 4.03],
-            ['A.S.', '~5,81m\u00b2', 6.26, 0.3, 8.61],
+            ['A.S.', '~5,81m\u00b2', 6.26, 0.3, 8.54],
             ['QT 2', '~10,00m\u00b2', 2.06, 0.3, 4.03],
-            ['CZ', '~7,00m\u00b2', 6.26, 0.3, 5.75],
+            ['CZ', '~7,00m\u00b2', 6.26, 0.3, 5.68],
             ['SL', '14,56m\u00b2', 5.56, 0.3, 2.12],
             ['ESTACION.', '~17,50m\u00b2', 1.87, 0.3, 1.39],
         ];
@@ -563,7 +724,7 @@
             labelG.add(label(name, x, y, z, 13, '#222'));
             if (area) labelG.add(label(area, x, y - 0.15, z, 10, '#555'));
         });
-        labelG.add(label('bancada h=1,20', 6.40, 1.1, 7.00, 9, '#666'));
+        labelG.add(label('bancada h=1,20', 6.35, 1.1, 6.85, 9, '#666'));
 
         // ===== DIMENSION LINES =====
         dimG.add(dimLine([0,0,0], [7.50,0,0], [0,-0.2,-1.2], '7,50m'));
@@ -571,17 +732,20 @@
         dimG.add(dimLine([0,0,9.96], [3.38,0,9.96], [0,0,0.8], '3,26m'));
         dimG.add(dimLine([0,0,8.42], [0,0,5.40], [-1.2,0,0], '3,02m'));
         dimG.add(dimLine([0,0,5.28], [0,0,2.78], [-1.5,0,0], '2,50m'));
-        dimG.add(dimLine([3.54,0,5.28], [3.54,0,2.78], [-0.3,0,0], '5,84m'));
-        dimG.add(dimLine([3.54,0,5.28], [7.38,0,5.28], [0,0,0.5], '3,84m'));
+        dimG.add(dimLine([4.12,0,2.78], [4.12,0,8.62], [-0.3,0,0], '5,84m'));
+        dimG.add(dimLine([3.54,0,5.34], [7.38,0,5.34], [0,0,0.5], '3,84m'));
         dimG.add(dimLine([0,0,2.66], [0,0,0.12], [-1.2,0,0], '2,54m'));
         dimG.add(dimLine([7.50,H,0], [7.50,H+SLAB,0], [1.0,0,-0.3], '0,10m'));
         dimG.add(dimLine([7.50,0,0], [7.50,H,0], [1.5,0,-0.3], '2,70m'));
+        dimG.add(dimLine([0.12,0,2.78], [4.00,0,2.78], [0,0,-0.5], '3,88m'));
+        dimG.add(dimLine([4.12,0,4.03], [5.02,0,4.03], [0,0,-0.3], '0,90m'));
+        dimG.add(dimLine([5.14,0,5.68], [7.38,0,5.68], [0,0,0.5], '2,24m'));
 
         // ===== GRID =====
         const grid = new THREE.GridHelper(30, 30, 0x88aa88, 0x88aa8844);
         grid.position.set(3.75, -0.04, 4.98);
         grid.material.transparent = true;
-        grid.material.opacity = 0.15;
+        grid.material.opacity = 0.12;
         scene.add(grid);
 
         // ===== CAMERA VIEWS =====
