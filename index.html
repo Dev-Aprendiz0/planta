@@ -763,8 +763,10 @@
             // Animate camera
             const startPos = camera.position.clone();
             const startTarget = controls.target.clone();
+            const startFov = camera.fov;
             const endPos = new THREE.Vector3(...view.pos);
             const endTarget = new THREE.Vector3(...view.target);
+            const endFov = view.fov || 50;
             
             const duration = 800;
             const startTime = Date.now();
@@ -776,14 +778,13 @@
 
                 camera.position.lerpVectors(startPos, endPos, ease);
                 controls.target.lerpVectors(startTarget, endTarget, ease);
+                camera.fov = startFov + (endFov - startFov) * ease;
+                camera.updateProjectionMatrix();
                 controls.update();
 
                 if (t < 1) requestAnimationFrame(animateCamera);
             }
             animateCamera();
-
-            camera.fov = view.fov || 50;
-            camera.updateProjectionMatrix();
         };
 
         // ===== TOGGLE FUNCTIONS =====
