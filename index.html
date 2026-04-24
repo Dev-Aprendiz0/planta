@@ -216,8 +216,15 @@
             for (let y = 0; y < 256; y += th) {
                 for (let x = 0; x < 256; x += tw) {
                     const r = Math.random()*8 - 4;
-                    g.fillStyle = baseCol || `rgb(${215+r},${210+r},${200+r})`;
-                    g.fillRect(x+1, y+1, tw-2, th-2);
+                    if (baseCol) {
+                        g.fillStyle = baseCol;
+                        g.fillRect(x+1, y+1, tw-2, th-2);
+                        g.fillStyle = `rgba(${128+r*8},${128+r*8},${128+r*8},0.06)`;
+                        g.fillRect(x+1, y+1, tw-2, th-2);
+                    } else {
+                        g.fillStyle = `rgb(${215+r},${210+r},${200+r})`;
+                        g.fillRect(x+1, y+1, tw-2, th-2);
+                    }
                 }
             }
             const t = new THREE.CanvasTexture(c);
