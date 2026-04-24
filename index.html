@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planta 3D - Casa A e B</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: #1a1a2e; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        #controls button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            background: rgba(30, 60, 114, 0.85);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            text-align: left;
+            min-width: 180px;
+        }
+        
+        #controls button:hover {
+            background: rgba(42, 82, 152, 0.95);
+            transform: translateX(3px);
+        }
+        
+        #controls button.active {
+            background: rgba(0, 150, 136, 0.9);
+        }
+
+        #info-panel {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            z-index: 100;
+            background: rgba(30, 60, 114, 0.85);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            max-width: 320px;
+        }
+        
+        #info-panel h3 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #4fc3f7;
+        }
+
+        #legend {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(30, 60, 114, 0.85);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.8;
+        }
+        
+        #legend h3 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #4fc3f7;
+        }
+        
+        #legend .color-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #legend .color-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        #title-bar {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(30, 60, 114, 0.85);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 10px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        #toggle-options {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #toggle-options label {
+            color: #fff;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: rgba(30, 60, 114, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 14px;
+            border-radius: 6px;
+        }
+
+        #toggle-options input[type="checkbox"] {
+            accent-color: #00bcd4;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="title-bar">PL BAIXA CASA A e B &mdash; Modelo 3D &mdash; ESC: 1/100</div>
+
+    <div id="controls">
+        <button onclick="setView('perspective')" id="btn-persp" class="active">&#x1f3e0; Vista Perspectiva</button>
+        <button onclick="setView('top')" id="btn-top">&#x2b06; Vista Superior</button>
+        <button onclick="setView('front')" id="btn-front">&#x27a1; Vista Frontal</button>
+        <button onclick="setView('back')" id="btn-back">&#x2b05; Vista Posterior</button>
+        <button onclick="setView('left')" id="btn-left">&#x1f448; Vista Lateral Esq.</button>
+        <button onclick="setView('right')" id="btn-right">&#x1f449; Vista Lateral Dir.</button>
+    </div>
+
+    <div id="legend">
+        <h3>LEGENDA (m)</h3>
+        <div class="color-item"><div class="color-box" style="background:#e8d5b7"></div> Paredes (0,12)</div>
+        <div class="color-item"><div class="color-box" style="background:#8B4513"></div> Portas</div>
+        <div class="color-item"><div class="color-box" style="background:#64b5f6; opacity:0.5"></div> Janelas</div>
+        <div class="color-item"><div class="color-box" style="background:#b0bec5"></div> Laje (0,10)</div>
+        <div class="color-item"><div class="color-box" style="background:#795548"></div> Piso</div>
+        <hr style="border-color:rgba(255,255,255,0.2); margin: 6px 0;">
+        <div>p-1= 0,70x2,10</div>
+        <div>p-2= 0,80x2,10</div>
+        <div>p-3= 0,90x2,10</div>
+        <div>j-2= 0,60x0,60</div>
+        <div>j-3= 1,60x1,20</div>
+        <div>j-4= 1,40x1,20</div>
+        <div>j-5= 2,00x3,00</div>
+    </div>
+
+    <div id="info-panel">
+        <h3>Informacoes</h3>
+        <div>Beiral = 1,00m</div>
+        <div>Parede = 0,12m</div>
+        <div>Laje = 0,10m</div>
+        <div>Pe-direito = 2,80m</div>
+        <div style="margin-top:6px; color:#aaa;">Use o mouse para rotacionar, zoom e mover</div>
+    </div>
+
+    <div id="toggle-options">
+        <label><input type="checkbox" id="toggle-roof" checked onchange="toggleRoof()"> Mostrar Laje/Telhado</label>
+        <label><input type="checkbox" id="toggle-labels" checked onchange="toggleLabels()"> Mostrar Etiquetas</label>
+        <label><input type="checkbox" id="toggle-dims" checked onchange="toggleDimensions()"> Mostrar Cotas</label>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // ===== SCENE SETUP =====
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(12, 10, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.getElementById('canvas-container').appendChild(labelRenderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.target.set(3.75, 1.4, 4.98);
+        controls.update();
+
+        // ===== CONSTANTS =====
+        const WALL_T = 0.12;
+        const WALL_H = 2.80;
+        const SLAB_T = 0.10;
+        const BEIRAL = 1.00;
+
+        // ===== MATERIALS =====
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8d5b7, roughness: 0.8 });
+        const wallMatInner = new THREE.MeshStandardMaterial({ color: 0xf5ebe0, roughness: 0.9 });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.6 });
+        const slabMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.5, side: THREE.DoubleSide });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x64b5f6, transparent: true, opacity: 0.3, roughness: 0.1 });
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
+        const counterMat = new THREE.MeshStandardMaterial({ color: 0x607d8b, roughness: 0.4 });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 1.0 });
+
+        // Groups
+        const roofGroup = new THREE.Group();
+        const labelGroup = new THREE.Group();
+        const dimGroup = new THREE.Group();
+        scene.add(roofGroup);
+        scene.add(labelGroup);
+        scene.add(dimGroup);
+
+        // ===== LIGHTING =====
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(10, 15, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.camera.left = -15;
+        dirLight.shadow.camera.right = 15;
+        dirLight.shadow.camera.top = 15;
+        dirLight.shadow.camera.bottom = -15;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        fillLight.position.set(-5, 8, -5);
+        scene.add(fillLight);
+
+        // ===== HELPER FUNCTIONS =====
+        function createBox(w, h, d, mat, x, y, z) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        // Build a wall segment along X axis (width in X, thickness in Z)
+        function wallX(x1, x2, z, height, yBase) {
+            const w = Math.abs(x2 - x1);
+            const cx = (x1 + x2) / 2;
+            const cz = z + WALL_T / 2;
+            const cy = yBase + height / 2;
+            return createBox(w, height, WALL_T, wallMat, cx, cy, cz);
+        }
+
+        // Build a wall segment along Z axis (depth in Z, thickness in X)
+        function wallZ(z1, z2, x, height, yBase) {
+            const d = Math.abs(z2 - z1);
+            const cz = (z1 + z2) / 2;
+            const cx = x + WALL_T / 2;
+            const cy = yBase + height / 2;
+            return createBox(WALL_T, height, d, wallMat, cx, cy, cz);
+        }
+
+        // Wall along X with openings
+        function wallXWithOpenings(x1, x2, z, height, yBase, openings) {
+            const group = new THREE.Group();
+            openings.sort((a, b) => a.pos - b.pos);
+            
+            let currentX = x1;
+            for (const op of openings) {
+                const opLeft = op.pos - op.width / 2;
+                const opRight = op.pos + op.width / 2;
+                
+                // Wall segment before opening
+                if (opLeft > currentX + 0.001) {
+                    group.add(wallSegmentX(currentX, opLeft, z, height, yBase));
+                }
+                
+                // Wall above opening (lintel)
+                const opTop = yBase + (op.sillHeight || 0) + op.height;
+                if (opTop < yBase + height - 0.001) {
+                    group.add(wallSegmentX(opLeft, opRight, z, yBase + height - opTop, opTop));
+                }
+                
+                // Wall below opening (sill for windows)
+                if (op.sillHeight && op.sillHeight > 0.001) {
+                    group.add(wallSegmentX(opLeft, opRight, z, op.sillHeight, yBase));
+                }
+                
+                // Glass for windows
+                if (op.type === 'window') {
+                    const glassGeo = new THREE.BoxGeometry(op.width, op.height, 0.02);
+                    const glass = new THREE.Mesh(glassGeo, glassMat);
+                    glass.position.set(op.pos, yBase + (op.sillHeight || 0) + op.height / 2, z + WALL_T / 2);
+                    group.add(glass);
+                }
+                
+                // Door panel hint
+                if (op.type === 'door') {
+                    const doorGeo = new THREE.BoxGeometry(op.width, op.height, 0.03);
+                    const door = new THREE.Mesh(doorGeo, doorMat);
+                    door.position.set(op.pos, yBase + op.height / 2, z + WALL_T / 2);
+                    group.add(door);
+                }
+                
+                currentX = opRight;
+            }
+            
+            // Wall segment after last opening
+            if (currentX < x2 - 0.001) {
+                group.add(wallSegmentX(currentX, x2, z, height, yBase));
+            }
+            
+            return group;
+        }
+
+        function wallSegmentX(x1, x2, z, height, yBase) {
+            const w = Math.abs(x2 - x1);
+            if (w < 0.001) return new THREE.Group();
+            const cx = (x1 + x2) / 2;
+            const cz = z + WALL_T / 2;
+            const cy = yBase + height / 2;
+            return createBox(w, height, WALL_T, wallMat, cx, cy, cz);
+        }
+
+        // Wall along Z with openings
+        function wallZWithOpenings(z1, z2, x, height, yBase, openings) {
+            const group = new THREE.Group();
+            openings.sort((a, b) => a.pos - b.pos);
+            
+            let currentZ = z1;
+            for (const op of openings) {
+                const opLeft = op.pos - op.width / 2;
+                const opRight = op.pos + op.width / 2;
+                
+                if (opLeft > currentZ + 0.001) {
+                    group.add(wallSegmentZ(currentZ, opLeft, x, height, yBase));
+                }
+                
+                const opTop = yBase + (op.sillHeight || 0) + op.height;
+                if (opTop < yBase + height - 0.001) {
+                    group.add(wallSegmentZ(opLeft, opRight, x, yBase + height - opTop, opTop));
+                }
+                
+                if (op.sillHeight && op.sillHeight > 0.001) {
+                    group.add(wallSegmentZ(opLeft, opRight, x, op.sillHeight, yBase));
+                }
+                
+                if (op.type === 'window') {
+                    const glassGeo = new THREE.BoxGeometry(0.02, op.height, op.width);
+                    const glass = new THREE.Mesh(glassGeo, glassMat);
+                    glass.position.set(x + WALL_T / 2, yBase + (op.sillHeight || 0) + op.height / 2, op.pos);
+                    group.add(glass);
+                }
+                
+                if (op.type === 'door') {
+                    const doorGeo = new THREE.BoxGeometry(0.03, op.height, op.width);
+                    const door = new THREE.Mesh(doorGeo, doorMat);
+                    door.position.set(x + WALL_T / 2, yBase + op.height / 2, op.pos);
+                    group.add(door);
+                }
+                
+                currentZ = opRight;
+            }
+            
+            if (currentZ < z2 - 0.001) {
+                group.add(wallSegmentZ(currentZ, z2, x, height, yBase));
+            }
+            
+            return group;
+        }
+
+        function wallSegmentZ(z1, z2, x, height, yBase) {
+            const d = Math.abs(z2 - z1);
+            if (d < 0.001) return new THREE.Group();
+            const cz = (z1 + z2) / 2;
+            const cx = x + WALL_T / 2;
+            const cy = yBase + height / 2;
+            return createBox(WALL_T, height, d, wallMat, cx, cy, cz);
+        }
+
+        // Create text label
+        function createLabel(text, x, y, z, fontSize, color) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.style.color = color || '#ffffff';
+            div.style.fontSize = (fontSize || 12) + 'px';
+            div.style.fontWeight = '600';
+            div.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+            div.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
+            div.style.background = 'rgba(0,0,0,0.5)';
+            div.style.padding = '2px 6px';
+            div.style.borderRadius = '3px';
+            div.style.whiteSpace = 'nowrap';
+            const label = new CSS2DObject(div);
+            label.position.set(x, y, z);
+            return label;
+        }
+
+        // Dimension line
+        function createDimLine(p1, p2, offset, text) {
+            const group = new THREE.Group();
+            const dir = new THREE.Vector3().subVectors(
+                new THREE.Vector3(p2[0], p2[1], p2[2]),
+                new THREE.Vector3(p1[0], p1[1], p1[2])
+            );
+            const len = dir.length();
+            
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xff5722 });
+            const points = [
+                new THREE.Vector3(p1[0] + offset[0], p1[1] + offset[1], p1[2] + offset[2]),
+                new THREE.Vector3(p2[0] + offset[0], p2[1] + offset[1], p2[2] + offset[2])
+            ];
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeo, lineMat);
+            group.add(line);
+
+            // Extension lines
+            const ext1Points = [
+                new THREE.Vector3(p1[0], p1[1], p1[2]),
+                new THREE.Vector3(p1[0] + offset[0], p1[1] + offset[1], p1[2] + offset[2])
+            ];
+            const ext1Geo = new THREE.BufferGeometry().setFromPoints(ext1Points);
+            group.add(new THREE.Line(ext1Geo, lineMat));
+
+            const ext2Points = [
+                new THREE.Vector3(p2[0], p2[1], p2[2]),
+                new THREE.Vector3(p2[0] + offset[0], p2[1] + offset[1], p2[2] + offset[2])
+            ];
+            const ext2Geo = new THREE.BufferGeometry().setFromPoints(ext2Points);
+            group.add(new THREE.Line(ext2Geo, lineMat));
+
+            // Label
+            const mid = [
+                (p1[0] + p2[0]) / 2 + offset[0],
+                (p1[1] + p2[1]) / 2 + offset[1],
+                (p1[2] + p2[2]) / 2 + offset[2]
+            ];
+            const label = createLabel(text, mid[0], mid[1], mid[2], 10, '#ff5722');
+            group.add(label);
+
+            return group;
+        }
+
+        // ===== BUILDING LAYOUT =====
+        // All coordinates in meters, origin at bottom-left-front corner
+        // X: left to right, Y: up, Z: front to back
+
+        const BW = 7.50;  // Building width
+        const BD = 9.96;  // Building depth
+        const T = WALL_T;  // Wall thickness
+
+        // Room internal boundaries
+        const rooms = {
+            estacion: { x1: T, x2: 3.62, z1: T, z2: 4.12, name: 'ESTACION.', area: '14,00m\u00b2' },
+            sl:       { x1: 3.74, x2: 7.38, z1: T, z2: 4.12, name: 'SL', area: '14,56m\u00b2' },
+            qtLow:    { x1: T, x2: 4.12, z1: 4.24, z2: 6.74, name: 'QT', area: '10,03m\u00b2' },
+            bh:       { x1: 3.54, x2: 5.14, z1: 6.86, z2: 8.86, name: 'BH', area: '3,20m\u00b2' },
+            cz:       { x1: 5.14, x2: 7.38, z1: 4.24, z2: 6.48, name: 'CZ', area: '5,02m\u00b2' },
+            as:       { x1: 5.14, x2: 7.38, z1: 6.60, z2: 9.00, name: 'A.S.', area: '5,38m\u00b2' },
+            qtUp:     { x1: T, x2: 3.42, z1: 6.86, z2: 9.84, name: 'QT', area: '9,90m\u00b2' },
+            circ:     { x1: 4.24, x2: 5.02, z1: 4.24, z2: 6.74, name: 'circ.', area: '' },
+        };
+
+        // ===== GROUND =====
+        const groundGeo = new THREE.PlaneGeometry(25, 25);
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.set(BW / 2, -0.01, BD / 2);
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // ===== FLOOR SLAB =====
+        const floorSlab = createBox(BW + 0.10, SLAB_T, BD + 0.10, floorMat, BW / 2, -SLAB_T / 2, BD / 2);
+        floorSlab.receiveShadow = true;
+        scene.add(floorSlab);
+
+        // ===== EXTERNAL WALLS =====
+
+        // FRONT WALL (z=0) - SL section only (parking is open)
+        // SL front wall with j-5 window (large sliding door 2.00w x 2.60h) and p-3 door
+        const frontWallSL = wallXWithOpenings(3.62, BW, 0, WALL_H, 0, [
+            { pos: 5.56, width: 2.00, height: 2.60, sillHeight: 0, type: 'window' }, // j-5 sliding glass
+            { pos: 6.88, width: 0.90, height: 2.10, sillHeight: 0, type: 'door' }     // p-3 entrance
+        ]);
+        scene.add(frontWallSL);
+
+        // Small front wall for parking (left side, partial - just columns/edges)
+        // Parking has open front for car entry, but has small wall segments at edges
+        scene.add(wallSegmentX(0, 0.30, 0, WALL_H, 0)); // left edge
+        scene.add(wallSegmentX(3.32, 3.62, 0, WALL_H, 0)); // right edge before internal wall
+
+        // BACK WALL (z = BD - T)
+        scene.add(wallXWithOpenings(0, BW, BD - T, WALL_H, 0, [
+            { pos: 1.77, width: 1.60, height: 1.20, sillHeight: 1.10, type: 'window' } // j-3 upper QT back
+        ]));
+
+        // LEFT WALL (x=0)
+        scene.add(wallZWithOpenings(0, BD, 0, WALL_H, 0, [
+            { pos: 2.12, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' },     // p/S parking side door
+            { pos: 5.49, width: 1.40, height: 1.20, sillHeight: 1.10, type: 'window' }, // j-4 lower QT
+            { pos: 8.35, width: 0.60, height: 0.60, sillHeight: 1.50, type: 'window' }  // j-2 BH window (on upper QT side)
+        ]));
+
+        // RIGHT WALL (x = BW - T)
+        scene.add(wallZWithOpenings(0, BD, BW - T, WALL_H, 0, [
+            { pos: 2.12, width: 2.00, height: 2.60, sillHeight: 0, type: 'window' },   // j-5 SL side (large)
+            { pos: 5.36, width: 1.40, height: 1.20, sillHeight: 1.10, type: 'window' }, // j-4 CZ window
+            { pos: 7.80, width: 1.40, height: 1.20, sillHeight: 1.10, type: 'window' }, // j-4 A.S. window
+            { pos: 9.40, width: 0.60, height: 0.60, sillHeight: 1.50, type: 'window' }  // j-2 upper area
+        ]));
+
+        // ===== INTERNAL WALLS =====
+
+        // Vertical wall between ESTACION and SL (x=3.62, z=0 to 4.12)
+        scene.add(wallZWithOpenings(0, 4.12 + T, 3.62, WALL_H, 0, [
+            { pos: 2.50, width: 0.80, height: 2.10, sillHeight: 0, type: 'door' } // p-2 passage to SL
+        ]));
+
+        // Horizontal wall separating bottom section from middle (z=4.12, full width)
+        // Left portion (ESTACION to lower QT)
+        scene.add(wallXWithOpenings(0, 4.24, 4.12, WALL_H, 0, [
+            { pos: 2.00, width: 0.80, height: 2.10, sillHeight: 0, type: 'door' } // p-2 from parking to QT
+        ]));
+        // Right portion (SL to corridor/CZ)
+        scene.add(wallXWithOpenings(4.24, BW, 4.12, WALL_H, 0, [
+            { pos: 5.56, width: 0.90, height: 2.10, sillHeight: 0, type: 'door' } // passage from SL
+        ]));
+
+        // Vertical wall between lower QT and corridor (x=4.12, z=4.24 to 6.74)
+        scene.add(wallZWithOpenings(4.24, 6.74, 4.12, WALL_H, 0, [
+            { pos: 5.49, width: 0.80, height: 2.10, sillHeight: 0, type: 'door' } // p-2 from QT to corridor
+        ]));
+
+        // Vertical wall between corridor and CZ/AS (x=5.02, z=4.24 to 9.84)
+        scene.add(wallZWithOpenings(4.24, 6.48, 5.02, WALL_H, 0, [
+            { pos: 5.36, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' } // p-1 to CZ
+        ]));
+        // Continue wall for AS section
+        scene.add(wallZWithOpenings(6.48, 9.00, 5.02, WALL_H, 0, [
+            { pos: 7.50, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' } // p-1 to A.S.
+        ]));
+        // Wall segment above A.S. to back
+        scene.add(wallSegmentZ(9.00, BD - T, 5.02, WALL_H, 0));
+
+        // Horizontal wall between CZ and A.S. (z=6.48, x=5.02 to BW)
+        scene.add(wallXWithOpenings(5.02, BW - T, 6.48, WALL_H, 0, []));
+
+        // Horizontal wall at z=6.74 (lower QT top / transition)
+        scene.add(wallXWithOpenings(0, 4.24, 6.74, WALL_H, 0, []));
+
+        // Horizontal wall at z=6.86 (upper QT bottom / BH bottom)
+        // Short segment from left wall to upper QT right wall
+        scene.add(wallSegmentX(0, 3.54, 6.86, WALL_H, 0));
+
+        // Vertical wall: upper QT right wall (x=3.42, z=6.86 to 9.84)
+        scene.add(wallZWithOpenings(6.86, BD - T, 3.42, WALL_H, 0, [
+            { pos: 8.00, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' } // p-1 from QT to corridor area
+        ]));
+
+        // BH walls
+        // BH bottom wall (z=6.86) - from x=3.54 to x=5.14 (already part of horizontal wall)
+        scene.add(wallXWithOpenings(3.54, 5.14, 6.86, WALL_H, 0, [
+            { pos: 4.34, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' } // p-1 BH door
+        ]));
+        
+        // BH top wall (z=8.86)
+        scene.add(wallSegmentX(3.42, 5.14, 8.86, WALL_H, 0));
+
+        // BH right wall (x=5.02 to 5.14, already covered by corridor wall segment)
+        // Additional BH right wall from z=6.86 to z=8.86
+        scene.add(wallSegmentZ(6.86, 8.86, 5.02, WALL_H, 0));
+
+        // Upper QT en-suite partition (internal bathroom in upper bedroom)
+        // Small bathroom at back-left of upper QT
+        // Partition at z=9.00, x=0.12 to 1.72
+        scene.add(wallXWithOpenings(T, 1.72, 9.00, WALL_H, 0, [
+            { pos: 1.22, width: 0.70, height: 2.10, sillHeight: 0, type: 'door' } // p-1 en-suite
+        ]));
+        // Partition at x=1.72, z=9.00 to 9.84
+        scene.add(wallSegmentZ(9.00, BD - T, 1.60, WALL_H, 0));
+
+        // Upper right window area - j-3 window on back of upper QT
+        // (already added in back wall)
+
+        // j-2 window: upper right area
+        // j-3 window on right side of upper QT section (if applicable)
+
+        // Horizontal corridor connection at z=6.74 to z=6.86
+        // This area connects the vertical corridor to the BH and upper QT doors
+
+        // ===== KITCHEN COUNTER (bancada h=1.20) =====
+        const counter = createBox(2.00, 1.20, 0.50, counterMat, 6.20, 0.60, 4.60);
+        scene.add(counter);
+
+        // ===== CEILING SLAB =====
+        const ceilingSlab = createBox(BW + 2 * BEIRAL, SLAB_T, BD + 2 * BEIRAL, slabMat,
+            BW / 2, WALL_H + SLAB_T / 2, BD / 2);
+        roofGroup.add(ceilingSlab);
+
+        // Beiral edge highlight
+        const beiralEdgeMat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, roughness: 0.5 });
+        // Front beiral edge
+        roofGroup.add(createBox(BW + 2 * BEIRAL, 0.05, 0.08, beiralEdgeMat,
+            BW / 2, WALL_H + SLAB_T, BD / 2 - BD / 2 - BEIRAL + 0.04));
+        // Back beiral edge
+        roofGroup.add(createBox(BW + 2 * BEIRAL, 0.05, 0.08, beiralEdgeMat,
+            BW / 2, WALL_H + SLAB_T, BD + BEIRAL - 0.04));
+        // Left beiral edge
+        roofGroup.add(createBox(0.08, 0.05, BD + 2 * BEIRAL, beiralEdgeMat,
+            -BEIRAL + 0.04, WALL_H + SLAB_T, BD / 2));
+        // Right beiral edge
+        roofGroup.add(createBox(0.08, 0.05, BD + 2 * BEIRAL, beiralEdgeMat,
+            BW + BEIRAL - 0.04, WALL_H + SLAB_T, BD / 2));
+
+        // ===== ROOM LABELS =====
+        function addRoomLabels() {
+            for (const [key, room] of Object.entries(rooms)) {
+                const cx = (room.x1 + room.x2) / 2;
+                const cz = (room.z1 + room.z2) / 2;
+                const nameLabel = createLabel(room.name, cx, 0.1, cz, 13, '#ffffff');
+                labelGroup.add(nameLabel);
+                if (room.area) {
+                    const areaLabel = createLabel(room.area, cx, 0.05, cz + 0.35, 10, '#aaaaaa');
+                    labelGroup.add(areaLabel);
+                }
+            }
+            // Extra labels
+            labelGroup.add(createLabel('LBH', 0.92, 0.1, 9.42, 11, '#88ccff'));
+            labelGroup.add(createLabel('bancada h=1,20', 6.20, 1.25, 4.60, 9, '#ff9800'));
+        }
+        addRoomLabels();
+
+        // ===== DIMENSION LINES =====
+        function addDimensions() {
+            // Overall width (bottom)
+            dimGroup.add(createDimLine(
+                [0, 0, 0], [BW, 0, 0], [0, -0.3, -0.5], '7,50m'
+            ));
+
+            // Overall depth (right side)
+            dimGroup.add(createDimLine(
+                [BW, 0, 0], [BW, 0, BD], [0.5, -0.3, 0], '9,96m'
+            ));
+
+            // Left section width at bottom
+            dimGroup.add(createDimLine(
+                [0, 0, 0], [3.62, 0, 0], [0, -0.15, -0.3], '3,62m'
+            ));
+
+            // Right section width at bottom
+            dimGroup.add(createDimLine(
+                [3.62, 0, 0], [BW, 0, 0], [0, -0.15, -0.8], '3,88m'
+            ));
+
+            // ESTACION depth
+            dimGroup.add(createDimLine(
+                [0, 0, T], [0, 0, 4.12], [-0.5, -0.15, 0], '4,00m'
+            ));
+
+            // Lower QT depth
+            dimGroup.add(createDimLine(
+                [0, 0, 4.24], [0, 0, 6.74], [-0.5, -0.15, 0], '2,50m'
+            ));
+
+            // Upper QT width
+            dimGroup.add(createDimLine(
+                [T, 0, BD], [3.42, 0, BD], [0, -0.15, 0.5], '3,30m'
+            ));
+
+            // Upper QT depth
+            dimGroup.add(createDimLine(
+                [0, 0, 6.86], [0, 0, 9.84], [-0.8, -0.15, 0], '2,98m'
+            ));
+
+            // SL width
+            dimGroup.add(createDimLine(
+                [3.74, 0, 0], [7.38, 0, 0], [0, -0.15, -1.1], '3,64m'
+            ));
+
+            // Building height
+            dimGroup.add(createDimLine(
+                [BW, 0, 0], [BW, WALL_H, 0], [1.0, 0, -0.5], '2,80m'
+            ));
+
+            // Slab
+            dimGroup.add(createDimLine(
+                [BW, WALL_H, 0], [BW, WALL_H + SLAB_T, 0], [1.3, 0, -0.5], '0,10m'
+            ));
+        }
+        addDimensions();
+
+        // ===== GRID HELPER =====
+        const gridHelper = new THREE.GridHelper(25, 25, 0x333366, 0x222244);
+        gridHelper.position.set(BW / 2, -0.02, BD / 2);
+        scene.add(gridHelper);
+
+        // ===== AXES HELPER =====
+        const axesHelper = new THREE.AxesHelper(2);
+        axesHelper.position.set(-1.5, 0, -1.5);
+        scene.add(axesHelper);
+
+        // ===== CAMERA VIEWS =====
+        const views = {
+            perspective: { pos: [14, 10, 16], target: [3.75, 1.4, 4.98], fov: 50 },
+            top: { pos: [3.75, 20, 4.98], target: [3.75, 0, 4.98], fov: 40 },
+            front: { pos: [3.75, 2.0, -8], target: [3.75, 1.4, 4.98], fov: 50 },
+            back: { pos: [3.75, 2.0, 18], target: [3.75, 1.4, 4.98], fov: 50 },
+            left: { pos: [-10, 2.0, 4.98], target: [3.75, 1.4, 4.98], fov: 50 },
+            right: { pos: [17, 2.0, 4.98], target: [3.75, 1.4, 4.98], fov: 50 },
+        };
+
+        window.setView = function(viewName) {
+            const view = views[viewName];
+            if (!view) return;
+
+            // Update button states
+            document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+            const btn = document.getElementById('btn-' + (viewName === 'perspective' ? 'persp' : viewName));
+            if (btn) btn.classList.add('active');
+
+            // Animate camera
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const endPos = new THREE.Vector3(...view.pos);
+            const endTarget = new THREE.Vector3(...view.target);
+            
+            const duration = 800;
+            const startTime = Date.now();
+
+            function animateCamera() {
+                const elapsed = Date.now() - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+                camera.position.lerpVectors(startPos, endPos, ease);
+                controls.target.lerpVectors(startTarget, endTarget, ease);
+                controls.update();
+
+                if (t < 1) requestAnimationFrame(animateCamera);
+            }
+            animateCamera();
+
+            camera.fov = view.fov || 50;
+            camera.updateProjectionMatrix();
+        };
+
+        // ===== TOGGLE FUNCTIONS =====
+        window.toggleRoof = function() {
+            roofGroup.visible = document.getElementById('toggle-roof').checked;
+        };
+
+        window.toggleLabels = function() {
+            labelGroup.visible = document.getElementById('toggle-labels').checked;
+        };
+
+        window.toggleDimensions = function() {
+            dimGroup.visible = document.getElementById('toggle-dims').checked;
+        };
+
+        // ===== RESIZE HANDLER =====
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ===== ANIMATION LOOP =====
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
